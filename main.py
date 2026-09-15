@@ -6,7 +6,6 @@
 
 from datetime import date
 
-# --- Данные подписчика и подписки (простые типы данных) ---
 subscriber_name = "Иван Петров"
 subscriber_email = "ivan.petrov@example.com"
 notification_type = "Акции и скидки"
@@ -64,7 +63,7 @@ def format_notification(name, notif_type, channel, days_left):
     return message
 
 
-# --- Основной сценарий ---
+
 print("=== Сервис управления подписками на уведомления ===")
 print(f"Подписчик: {subscriber_name}")
 print(f"Email: {subscriber_email}")
