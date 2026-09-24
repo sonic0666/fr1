@@ -6,5 +6,13 @@
     "channel": "email",
     "end_date": "2026-12-31",
     "is_active": true
+  },
+  {
+    "id": 2,
+    "subscriber_id": 1,
+    "type_id": 2,
+    "channel": "push",
+    "end_date": "2026-10-01",
+    "is_active": true
   }
 ]

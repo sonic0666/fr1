@@ -3,19 +3,19 @@
 from datetime import date
 from pathlib import Path
 
-from notification_types import (
+from models import NotificationType, Subscriber, Subscription
+from models.notification_types import (
     add_notification_type,
     find_notification_type,
+    find_notification_type_by_id,
     sort_notification_types,
 )
-from subscribers import add_subscriber, find_subscriber
-from subscriptions import (
-    cancel_subscription,
-    check_subscription_status,
-    create_subscription,
-    days_until_renewal,
-    format_notification,
+from models.subscribers import (
+    add_subscriber,
+    find_subscriber,
+    find_subscriber_by_id,
 )
+from models.subscriptions import cancel_subscription, create_subscription
 from storage import (
     load_notification_types,
     load_subscribers,
@@ -49,56 +49,75 @@ MENU = """
 """
 
 
-def show_subscribers(subscribers: dict[int, dict]) -> None:
+def show_subscribers(subscribers: list[Subscriber]) -> None:
     """Вывести список подписчиков."""
     if not subscribers:
         print("Подписчиков пока нет.")
         return
-    for subscriber in subscribers.values():
-        print(
-            f"{subscriber['id']}. {subscriber['name']} "
-            f"({subscriber['email']})"
-        )
+    for subscriber in subscribers:
+        print(f"{subscriber.id}. {subscriber}")
 
 
-def show_notification_types(notification_types: dict[int, dict]) -> None:
+def show_notification_types(
+    notification_types: list[NotificationType],
+) -> None:
     """Вывести список типов уведомлений."""
     if not notification_types:
         print("Каталог типов уведомлений пуст.")
         return
-    for item in notification_types.values():
-        print(f"{item['id']}. {item['name']}")
+    for item in notification_types:
+        print(f"{item.id}. {item}")
 
 
-def show_subscriptions(
-    subscriptions: list[dict],
-    subscribers: dict[int, dict],
-    notification_types: dict[int, dict],
-) -> None:
+def show_subscriptions(subscriptions: list[Subscription]) -> None:
     """Вывести список подписок с их текущим статусом."""
     if not subscriptions:
         print("Подписок пока нет.")
         return
-    today = date.today()
     for subscription in subscriptions:
-        subscriber = subscribers.get(subscription["subscriber_id"])
-        notif_type = notification_types.get(subscription["type_id"])
-        subscriber_name = subscriber["name"] if subscriber else "неизвестно"
-        type_name = notif_type["name"] if notif_type else "неизвестно"
-        status = check_subscription_status(
-            subscription["is_active"], subscription["end_date"], today
-        )
-        print(
-            f"{subscription['id']}. {subscriber_name} -> {type_name} "
-            f"({subscription['channel']}): {status}"
-        )
+        print(f"{subscription.id}. {subscription}")
+
+
+def create_new_subscription(
+    subscriptions: list[Subscription],
+    subscribers: list[Subscriber],
+    notification_types: list[NotificationType],
+) -> None:
+    """Провести пользовательский сценарий оформления подписки."""
+    subscriber_id = input_int("Id подписчика: ")
+    subscriber = find_subscriber_by_id(subscribers, subscriber_id)
+    if subscriber is None:
+        print("Подписчик не найден.")
+        return
+
+    type_id = input_int("Id типа уведомлений: ")
+    notification_type = find_notification_type_by_id(
+        notification_types, type_id
+    )
+    if notification_type is None:
+        print("Тип уведомлений не найден.")
+        return
+
+    channel = input_channel("Канал (email/push/sms): ")
+    end_date = input_date("Дата окончания (ГГГГ-ММ-ДД): ")
+
+    subscription = create_subscription(
+        subscriptions, subscriber, notification_type, channel, end_date,
+        date.today(),
+    )
+    if subscription is not None:
+        print(f"Подписка оформлена, id={subscription.id}.")
+    else:
+        print("У подписчика уже есть активная подписка на этот тип и канал.")
 
 
 def main() -> None:
     """Запустить меню приложения и обработать выбор пользователя."""
     subscribers = load_subscribers(str(SUBSCRIBERS_FILE))
     notification_types = load_notification_types(str(TYPES_FILE))
-    subscriptions = load_subscriptions(str(SUBSCRIPTIONS_FILE))
+    subscriptions = load_subscriptions(
+        str(SUBSCRIPTIONS_FILE), notification_types, subscribers
+    )
 
     while True:
         print(MENU)
@@ -110,9 +129,9 @@ def main() -> None:
             name = input("Имя подписчика: ")
             email = input("Email: ")
             try:
-                subscriber_id = add_subscriber(subscribers, name, email)
+                subscriber = add_subscriber(subscribers, name, email)
                 save_subscribers(str(SUBSCRIBERS_FILE), subscribers)
-                print(f"Подписчик добавлен, id={subscriber_id}.")
+                print(f"Подписчик добавлен, id={subscriber.id}.")
             except ValueError as error:
                 print(f"Не удалось добавить подписчика: {error}")
         elif choice == "3":
@@ -122,9 +141,11 @@ def main() -> None:
             show_notification_types(notification_types)
         elif choice == "5":
             name = input("Название типа уведомлений: ")
-            type_id = add_notification_type(notification_types, name)
+            notification_type = add_notification_type(
+                notification_types, name
+            )
             save_notification_types(str(TYPES_FILE), notification_types)
-            print(f"Тип уведомлений добавлен, id={type_id}.")
+            print(f"Тип уведомлений добавлен, id={notification_type.id}.")
         elif choice == "6":
             query = input("Название: ")
             show_notification_types(
@@ -132,21 +153,12 @@ def main() -> None:
             )
         elif choice == "7":
             for item in sort_notification_types(notification_types):
-                print(item["name"])
+                print(item)
         elif choice == "8":
-            subscriber_id = input_int("Id подписчика: ")
-            type_id = input_int("Id типа уведомлений: ")
-            channel = input_channel("Канал (email/push/sms): ")
-            end_date = input_date("Дата окончания (ГГГГ-ММ-ДД): ")
-            try:
-                create_subscription(
-                    subscribers, subscriptions, subscriber_id, type_id,
-                    channel, end_date, date.today(),
-                )
-                save_subscriptions(str(SUBSCRIPTIONS_FILE), subscriptions)
-                print("Подписка оформлена.")
-            except (KeyError, ValueError) as error:
-                print(f"Не удалось оформить подписку: {error}")
+            create_new_subscription(
+                subscriptions, subscribers, notification_types
+            )
+            save_subscriptions(str(SUBSCRIPTIONS_FILE), subscriptions)
         elif choice == "9":
             subscription_id = input_int("Id подписки: ")
             if cancel_subscription(subscriptions, subscription_id):
@@ -155,39 +167,23 @@ def main() -> None:
             else:
                 print("Подписка не найдена.")
         elif choice == "10":
-            show_subscriptions(subscriptions, subscribers, notification_types)
+            show_subscriptions(subscriptions)
         elif choice == "11":
             subscription_id = input_int("Id подписки: ")
             subscription = next(
-                (s for s in subscriptions if s["id"] == subscription_id),
-                None,
+                (s for s in subscriptions if s.id == subscription_id), None
             )
             if subscription is None:
                 print("Подписка не найдена.")
                 continue
-            subscriber = subscribers.get(subscription["subscriber_id"])
-            notif_type = notification_types.get(subscription["type_id"])
             today = date.today()
-            status = check_subscription_status(
-                subscription["is_active"], subscription["end_date"], today
-            )
-            print(f"Статус подписки: {status}")
-            days_left = days_until_renewal(subscription["end_date"], today)
+            print(f"Статус подписки: {subscription.get_status(today)}")
+            days_left = subscription.days_until_renewal(today)
             print(f"Дней до окончания подписки: {days_left}")
-            if subscriber and notif_type and status == "Подписка активна":
-                print(
-                    format_notification(
-                        subscriber["name"],
-                        notif_type["name"],
-                        subscription["channel"],
-                        days_left,
-                    )
-                )
+            if subscription.get_status(today) == "Подписка активна":
+                print(subscription.format_notification(today))
             else:
-                print(
-                    "Уведомление не отправлено: подписка неактивна "
-                    "или данные не найдены"
-                )
+                print("Уведомление не отправлено: подписка неактивна.")
         elif choice == "0":
             print("До свидания!")
             break

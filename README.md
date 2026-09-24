@@ -42,14 +42,79 @@
 - просмотр статуса и формирование уведомления по конкретной подписке;
 - хранение данных между запусками в JSON-файлах.
 
+## Объектная модель (ПР3)
+
+Предметная область представлена тремя классами пакета `models/`:
+
+### NotificationType — тип уведомлений
+Атрибуты: `id`, `name`. Метод: `__str__()`.
+
+### Subscriber — подписчик
+Атрибуты: `id`, `name`, `email`.
+Методы:
+- `validate_email(email)` (`@staticmethod`) — функция из ПР1, проверка
+  формата email;
+- `from_data(data)` (`@classmethod`) — создание подписчика из словаря
+  (например, при загрузке из JSON);
+- `__str__()` — строковое представление.
+
+### Subscription — подписка
+Связывает объекты `Subscriber` и `NotificationType` через канал
+доставки. Атрибуты: `id`, `subscriber`, `notification_type`,
+`channel`, `end_date`, `is_active`.
+Методы:
+- `cancel()` — приостанавливает подписку (объект остаётся в истории);
+- `days_until_renewal(current_date)` — функция из ПР1, количество
+  дней до окончания;
+- `get_status(current_date)` — вызывает сохранённую без изменений
+  функцию `check_subscription_status()` из ПР1;
+- `format_notification(current_date)` — функция из ПР1, текст
+  уведомления для подписчика;
+- `__str__()` — строковое представление с учётом статуса.
+
+`Subscription` хранит ссылки на сами объекты `Subscriber` и
+`NotificationType`, а не только их идентификаторы, поэтому связанные
+данные доступны напрямую: `subscription.subscriber.name`,
+`subscription.notification_type.name`.
+
 ## Структура проекта
-- `main.py` — точка запуска, меню приложения;
-- `subscribers.py` — работа с подписчиками, `validate_email()` (ПР1);
-- `notification_types.py` — работа с каталогом типов уведомлений;
-- `subscriptions.py` — оформление и отмена подписок,
-  `check_subscription_status()`, `days_until_renewal()`,
-  `format_notification()` (все три — из ПР1, без изменений);
-- `storage.py` — сохранение и загрузка данных в JSON;
+```text
+fr1/
+├── README.md
+├── requirements.txt
+├── setup.cfg
+├── pytest.ini
+├── main.py
+├── storage.py
+├── utils.py
+│
+├── models/
+│   ├── __init__.py
+│   ├── notification_types.py
+│   ├── subscribers.py
+│   └── subscriptions.py
+│
+├── data/
+│   ├── subscribers.json
+│   ├── notification_types.json
+│   └── subscriptions.json
+│
+└── tests/
+    ├── test_subscribers.py
+    ├── test_notification_types.py
+    └── test_subscriptions.py
+```
+
+- `main.py` — точка запуска, меню приложения, пользовательские сценарии;
+- `models/subscribers.py` — класс `Subscriber` и функции
+  `add_subscriber`, `find_subscriber`, `find_subscriber_by_id`;
+- `models/notification_types.py` — класс `NotificationType` и функции
+  `add_notification_type`, `find_notification_type`,
+  `find_notification_type_by_id`, `sort_notification_types`;
+- `models/subscriptions.py` — класс `Subscription`, сохранённая функция
+  `check_subscription_status()` и функции `is_subscription_active`,
+  `create_subscription`, `cancel_subscription`;
+- `storage.py` — преобразование JSON <-> объекты;
 - `utils.py` — безопасный ввод чисел, дат и канала доставки;
 - `data/` — файлы данных;
 - `tests/` — автоматизированные тесты.
@@ -71,8 +136,15 @@ python main.py
 
 ## Запуск тестов
 ```
-pytest
+pytest -v
 ```
+
+Тесты проверяют создание и поведение объектов `NotificationType`,
+`Subscriber` и `Subscription`, методы классов, запрет повторной
+активной подписки на тот же тип и канал, отмену подписки и работу
+сохранённых функций ПР1 (`validate_email`,
+`check_subscription_status`, `days_until_renewal`,
+`format_notification`).
 
 ## Проверка качества кода
 ```
