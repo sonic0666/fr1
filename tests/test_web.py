@@ -41,8 +41,16 @@ def test_custom_404_page_for_unknown_url(client):
 
 
 def test_url_names_build_expected_paths():
-    assert reverse("index") == "/"
-    assert reverse("notification_types") == "/types/"
-    assert reverse("notification_type_detail", args=[1]) == "/types/1/"
-    assert reverse("subscriptions") == "/subscriptions/"
-    assert reverse("subscription_detail", args=[2]) == "/subscriptions/2/"
+    assert reverse("homepage:index") == "/"
+    assert reverse("notification_types:list") == "/types/"
+    assert reverse("notification_types:detail", args=[1]) == "/types/1/"
+    assert reverse("subscriptions:list") == "/subscriptions/"
+    assert reverse("subscriptions:detail", args=[2]) == "/subscriptions/2/"
+
+
+def test_homepage_uses_base_template(client):
+    response = client.get("/")
+    names = [template.name for template in response.templates]
+    assert "homepage/index.html" in names
+    assert "base.html" in names
+    assert "includes/navigation.html" in names

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Главная – NotifyHub
+{% endblock %}
+
+{% block content %}
+    <h1 class="display-4">NotifyHub</h1>
+
+    <p class="lead">
+        Сервис управления подписками на уведомления.
+    </p>
+    <p>Основные разделы:</p>
+    <a href="{% url 'notification_types:list' %}" class="btn btn-primary me-2">
+        Типы уведомлений
+    </a>
+    <a href="{% url 'subscriptions:list' %}" class="btn btn-secondary">
+        Подписки
+    </a>
+{% endblock %}

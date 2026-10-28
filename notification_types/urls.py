@@ -2,11 +2,9 @@ from django.urls import path
 
 from . import views
 
+app_name = "notification_types"
+
 urlpatterns = [
-    path("", views.notification_types, name="notification_types"),
-    path(
-        "<int:type_id>/",
-        views.notification_type_detail,
-        name="notification_type_detail",
-    ),
+    path("", views.notification_types, name="list"),
+    path("<int:type_id>/", views.notification_type_detail, name="detail"),
 ]
