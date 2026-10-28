@@ -15,3 +15,6 @@ __pycache__/
 # Прочее
 .DS_Store
 *.log
+
+# Django
+db.sqlite3
