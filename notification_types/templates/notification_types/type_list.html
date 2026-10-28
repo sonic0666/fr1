@@ -7,6 +7,10 @@
 {% block content %}
     <h1>Типы уведомлений</h1>
 
+    <p>
+        Всего типов: {{ notification_types|length }}
+    </p>
+
     {% for notification_type in notification_types %}
         {% include "notification_types/includes/type_card.html" %}
     {% empty %}

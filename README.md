@@ -4,7 +4,8 @@
 Приложение позволяет пользователям управлять подписками на различные типы
 уведомлений (email, push, SMS) и отслеживать статус каждой подписки
 (активна, приостановлена, истекла). Консольная версия приложения (ПР3)
-дополнена веб-интерфейсом на Django (ПР5).
+дополнена веб-интерфейсом на Django: страницы формируются шаблонами Django
+(ПР5–ПР6).
 
 Приложение позволяет:
 - просматривать типы уведомлений в браузере;
@@ -20,11 +21,11 @@
 ## Используемые технологии
 - Python 3;
 - Django 5.2 – веб-фреймворк;
-- HTML – разметка веб-страниц;
-- CSS и Bootstrap 5.3 – оформление страниц;
+- Django Template Language (DTL) – шаблоны страниц;
+- HTML5, CSS3, JavaScript;
+- Bootstrap 5.3 – базовая вёрстка (CDN);
 - JSON – хранение данных;
-- pytest – автоматизированные тесты;
-- flake8 – проверка качества кода.
+- Git, pytest, flake8.
 
 ## Целевая аудитория
 - пользователи веб- и мобильных сервисов, желающие гибко настраивать,
@@ -50,74 +51,96 @@
 
 ### Subscriber — подписчик
 Атрибуты: `id`, `name`, `email`.
-Методы:
-- `validate_email(email)` (`@staticmethod`) — проверка формата email;
-- `from_data(data)` (`@classmethod`) — создание подписчика из словаря
-  (например, при загрузке из JSON);
-- `__str__()` — строковое представление.
+Методы: `validate_email()` (`@staticmethod`), `from_data()`
+(`@classmethod`), `__str__()`.
 
 ### Subscription — подписка
 Связывает объекты `Subscriber` и `NotificationType` через канал доставки.
 Атрибуты: `id`, `subscriber`, `notification_type`, `channel`, `end_date`,
 `is_active`.
-Методы:
+Методы и свойства:
 - `cancel()` — приостанавливает подписку (объект остаётся в истории);
+- `is_expired` (`@property`) — истёк ли срок на сегодняшнюю дату;
 - `days_until_renewal(current_date)` — количество дней до окончания;
 - `get_status(current_date)` — статус подписки (через функцию
   `check_subscription_status()`, созданную в ПР1);
 - `format_notification(current_date)` — текст уведомления для подписчика;
 - `__str__()` — строковое представление с учётом статуса.
 
-`Subscription` хранит ссылки на объекты `Subscriber` и `NotificationType`,
-поэтому связанные данные доступны напрямую:
-`subscription.subscriber.name`, `subscription.notification_type.name`.
+## Веб-интерфейс
 
-## Страницы веб-интерфейса
+### Страницы и маршруты
 
-| URL | Страница | View-функция |
-|---|---|---|
-| `/` | главная: описание и навигация | `index()` |
-| `/types/` | список типов уведомлений из `data/notification_types.json` | `notification_types()` |
-| `/types/<int:type_id>/` | страница типа уведомлений | `notification_type_detail()` |
-| `/subscriptions/` | список подписок из `data/subscriptions.json` | `subscriptions()` |
-| `/subscriptions/<int:subscription_id>/` | страница подписки | `subscription_detail()` |
+| URL | Имя маршрута | Страница | View-функция |
+|---|---|---|---|
+| `/` | `homepage:index` | главная | `index()` |
+| `/types/` | `notification_types:list` | список типов уведомлений | `notification_types()` |
+| `/types/<int:type_id>/` | `notification_types:detail` | страница типа | `notification_type_detail()` |
+| `/subscriptions/` | `subscriptions:list` | список подписок | `subscriptions()` |
+| `/subscriptions/<int:subscription_id>/` | `subscriptions:detail` | страница подписки | `subscription_detail()` |
 
-Если тип уведомлений или подписка с указанным идентификатором не найдены,
-страница возвращает код статуса 404. Для любого несуществующего адреса
-подключён обработчик `handler404 = "homepage.views.page_not_found"`.
+Если тип уведомлений или подписка не найдены, страница возвращает код 404
+(`status=404` в `render()`). Для любого несуществующего адреса в корневом
+`urls.py` подключён обработчик `handler404 = "homepage.views.page_not_found"`,
+который показывает шаблон `templates/404.html`.
 
-HTML-страницы формируются в view-функциях; общий каркас (кодировка,
-заголовок, Bootstrap 5.3 по CDN, навигация) собирает вспомогательная
-функция `page()` из `homepage/views.py`. Оформление: классы Bootstrap
-(`container`, `list-group`, `card`, `badge`, `btn`).
+### Шаблоны Django (ПР6)
+HTML в Python-коде больше не формируется: view-функция загружает данные,
+готовит словарь контекста и вызывает
+`render(request, "имя_шаблона.html", context)`. Функция `page()` из ПР5
+удалена.
+
+- **Базовый шаблон** `templates/base.html` — общая структура страницы:
+  `<head>`, подключение Bootstrap и собственного CSS, шапка с логотипом и
+  навигацией, контейнер, подвал, JavaScript. Содержит блоки
+  `{% block title %}` и `{% block content %}`.
+- **Наследование**: дочерние шаблоны начинаются с
+  `{% extends "base.html" %}` и переопределяют блоки.
+- **Включаемые шаблоны** (`{% include %}`): навигация
+  `templates/includes/navigation.html`, карточка типа
+  `notification_types/includes/type_card.html`, статус подписки
+  `subscriptions/includes/subscription_status.html`.
+- **Контекст**: например `{"notification_types": types_list}` во view,
+  `{% for notification_type in notification_types %}` в шаблоне.
+- **Циклы и условия**: `{% for %}` / `{% empty %}` для списков,
+  `{% if %}` — для отсутствующего объекта и статуса подписки
+  (приостановлена / истекла / активна).
+- **Именованные URL и пространства имён**: `app_name` в `urls.py`
+  приложений, ссылки через `{% url 'notification_types:detail' id %}`,
+  жёстко заданных адресов в шаблонах нет.
+- **Фильтры**: `|length` (количество типов), `|default:"Без названия"`
+  (имя типа), `|date:"d.m.Y"` (срок подписки).
+- **Статические файлы** (`homepage/static/homepage/`): `css/style.css`
+  (собственные стили), `js/main.js` (текущий год в подвале),
+  `img/logo.png` (логотип); подключаются через `{% load static %}` и
+  `{% static %}`.
+
+Шаблоны приложений лежат в `<приложение>/templates/<приложение>/`,
+общие — в `templates/` (настроено в `TEMPLATES["DIRS"]`).
 
 ## Основные операции
 
-### Используется в веб-интерфейсе (ПР5)
-- просмотр списка типов уведомлений;
-- просмотр информации о типе уведомлений;
-- просмотр списка подписок;
-- просмотр информации о подписке и её статуса.
+### Используется в веб-интерфейсе
+- просмотр списка типов уведомлений и страницы типа;
+- просмотр списка подписок и страницы подписки со статусом.
 
 ### Отложено до следующих работ
 Эти операции реализованы в консольной версии (ПР2–ПР3) и появятся в вебе,
 когда будут добавлены формы и POST-запросы:
 - добавление подписчика и типа уведомлений;
-- поиск подписчика и типа уведомлений;
-- сортировка типов уведомлений;
+- поиск и сортировка;
 - оформление и приостановка подписки;
 - формирование текста уведомления.
 
 ## Хранение данных
-Данные хранятся в JSON-файлах:
+Данные пока хранятся в JSON-файлах (Django ORM ещё не используется):
 - `data/notification_types.json`;
 - `data/subscribers.json`;
 - `data/subscriptions.json`.
 
-При загрузке данные из JSON преобразуются в объекты `NotificationType`,
-`Subscriber` и `Subscription`; для связи подписки с подписчиком и типом
-в `subscriptions.json` используются идентификаторы `subscriber_id` и
-`type_id`.
+При загрузке (`storage.py`) данные преобразуются в объекты
+`NotificationType`, `Subscriber` и `Subscription`; подписка связывается с
+подписчиком и типом по идентификаторам `subscriber_id` и `type_id`.
 
 ## Структура проекта
 ```text
@@ -131,120 +154,94 @@ fr1/
 ├── storage.py
 ├── utils.py
 │
-├── notifyhub/
-│   ├── __init__.py
+├── notifyhub/                  (настройки Django-проекта)
 │   ├── settings.py
 │   ├── urls.py
 │   ├── asgi.py
 │   └── wsgi.py
 │
+├── templates/
+│   ├── base.html
+│   ├── 404.html
+│   └── includes/
+│       └── navigation.html
+│
 ├── homepage/
-│   ├── __init__.py
-│   ├── admin.py
-│   ├── apps.py
-│   ├── migrations/
-│   ├── models.py
-│   ├── tests.py
+│   ├── static/homepage/
+│   │   ├── css/style.css
+│   │   ├── js/main.js
+│   │   └── img/logo.png
+│   ├── templates/homepage/index.html
 │   ├── urls.py
 │   └── views.py
 │
-├── notification_types/        (admin.py, apps.py, migrations/,
-│   ├── urls.py                 models.py, tests.py — как в homepage)
-│   └── views.py
-│
-├── subscriptions/             (аналогично)
+├── notification_types/
+│   ├── templates/notification_types/
+│   │   ├── type_list.html
+│   │   ├── type_detail.html
+│   │   └── includes/type_card.html
 │   ├── urls.py
 │   └── views.py
 │
-├── models/                    (классы предметной области, ПР3)
-│   ├── __init__.py
-│   ├── notification_types.py
-│   ├── subscribers.py
-│   └── subscriptions.py
+├── subscriptions/
+│   ├── templates/subscriptions/
+│   │   ├── subscription_list.html
+│   │   ├── subscription_detail.html
+│   │   └── includes/subscription_status.html
+│   ├── urls.py
+│   └── views.py
 │
-├── data/
-└── tests/
+├── models/                     (классы предметной области, ПР3)
+├── data/                       (JSON-файлы)
+└── tests/                      (pytest)
 ```
+В каждом Django-приложении также есть служебные файлы `startapp`
+(`admin.py`, `apps.py`, `models.py`, `tests.py`, `migrations/`); Django-модели
+появятся на следующих практических работах.
 
 ## Назначение модулей
 - `main.py` — консольная версия приложения (сохранена с ПР3);
-- `notifyhub/` — пакет настроек Django-проекта: `settings.py` (настройки,
-  `INSTALLED_APPS`), `urls.py` (маршрутизация верхнего уровня и
-  `handler404`), `asgi.py`, `wsgi.py` (точки входа серверов);
-- `homepage/` — приложение главной страницы: `page()` (общий HTML-каркас),
-  `index()`, `page_not_found()`; функция `page()` размещена здесь, потому
-  что главная страница задаёт общий вид остальных страниц;
-- `notification_types/` — приложение типов уведомлений:
-  `notification_types()`, `notification_type_detail()`;
-- `subscriptions/` — приложение подписок: `subscriptions()`,
-  `subscription_detail()`;
+- `notifyhub/` — настройки проекта (`settings.py`), маршрутизация верхнего
+  уровня и `handler404` (`urls.py`), точки входа серверов;
+- `homepage/` — главная страница и обработчик 404, статические файлы сайта;
+- `notification_types/`, `subscriptions/` — страницы типов уведомлений и
+  подписок (view-функции, маршруты, шаблоны);
 - `models/` — классы предметной области и функции работы с ними;
-  `models.py` внутри Django-приложений пока пустые — Django-модели будут
-  созданы на следующих практических работах;
 - `storage.py` — преобразование JSON <-> объекты Python;
-- `utils.py` — безопасный ввод в консольной версии;
-- `tests/` — автоматизированные тесты (классы ПР3 и маршруты веба).
-
-Подписчики (`Subscriber`) отдельного Django-приложения не получили: работа
-с пользователями (регистрация, вход) будет рассмотрена в следующих темах.
+- `tests/` — автоматизированные тесты (классы ПР3, маршруты, шаблоны и
+  статика веб-интерфейса).
 
 ## Запуск приложения
-Установка зависимостей:
 ```text
 pip install -r requirements.txt
-```
-
-Веб-версия (Django):
-```text
 python manage.py migrate
 python manage.py runserver
 ```
-После запуска открыть в браузере адрес:
-```text
-http://127.0.0.1:8000/
-```
+После запуска открыть в браузере `http://127.0.0.1:8000/`.
+Консольная версия: `python main.py`.
 
-Консольная версия (сохранена):
+## Тестирование и качество кода
 ```text
-python main.py
-```
-
-## Тестирование
-```text
+python manage.py check
 pytest -v
-```
-Тесты проверяют объекты и методы классов ПР3, правила подписок, а также
-маршруты и коды ответов веб-интерфейса (200, 404, страница `handler404`).
-
-## Проверка качества кода
-```text
 flake8 .
 ```
 
-## Зависимости
-Состав зависимостей в `requirements.txt`:
-- `Django==5.2.*` – веб-фреймворк;
-- `pytest` – автоматизированные тесты;
-- `flake8` – проверка качества кода.
-
 ## Git
-Исходный код проекта хранится в Git-репозитории. Каждый коммит практической
-работы начинается с метки (`PR5:` и т. д.).
+Исходный код хранится в Git-репозитории. Каждый коммит практической работы
+начинается с метки (`PR5:`, `PR6:` и т. д.).
 
 ## Текущее состояние и план развития
-Реализовано (ПР5):
-- Django-проект и три Django-приложения (`homepage`,
-  `notification_types`, `subscriptions`);
-- маршрутизация URL двух уровней, динамические URL с конвертером `<int:>`;
-- view-функции и страницы, обработка ошибки 404;
-- отображение данных предметной области (типы уведомлений и подписки);
-- навигация между страницами;
-- оформление Bootstrap 5.3.
+Реализовано:
+- консольное приложение с объектной моделью (ПР1–ПР3);
+- Django-проект и три приложения, маршрутизация, обработка 404 (ПР5);
+- шаблонная архитектура: базовый шаблон, наследование, include, контекст,
+  циклы и условия, фильтры, именованные URL с пространствами имён, статические
+  файлы, собственные CSS и JavaScript (ПР6).
 
 Планируется:
-- переход на шаблоны (`templates/`) и отказ от функции `page()`;
-- статические файлы, собственные CSS и JavaScript;
-- база данных и Django ORM (перенос сущностей в модели Django);
+- база данных SQL и работа с SQLite (ПР7);
+- Django ORM: перенос сущностей в модели Django;
 - формы создания и изменения подписок;
 - разработка API;
 - контейнеризация приложения;

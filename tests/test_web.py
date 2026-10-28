@@ -3,6 +3,7 @@
 from types import SimpleNamespace
 
 import pytest
+from django.contrib.staticfiles import finders
 from django.template.loader import render_to_string
 from django.test import Client
 from django.test.utils import override_settings
@@ -39,7 +40,9 @@ def test_missing_subscription_returns_404(client):
 def test_custom_404_page_for_unknown_url(client):
     with override_settings(DEBUG=False):
         response = client.get("/nonexistent/")
+    names = [template.name for template in response.templates]
     assert response.status_code == 404
+    assert "404.html" in names
     assert "404 – страница не найдена" in response.content.decode("utf-8")
 
 
@@ -90,3 +93,34 @@ def test_subscription_status_include(is_active, is_expired, text):
         {"subscription": subscription},
     )
     assert text in html
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "homepage/css/style.css",
+        "homepage/js/main.js",
+        "homepage/img/logo.png",
+    ],
+)
+def test_static_files_are_found(path):
+    assert finders.find(path)
+
+
+def test_base_template_links_static_files(client):
+    html = client.get("/").content.decode("utf-8")
+    assert "/static/homepage/css/style.css" in html
+    assert "/static/homepage/js/main.js" in html
+    assert "/static/homepage/img/logo.png" in html
+    assert 'id="current-year"' in html
+
+
+def test_page_function_is_removed():
+    import homepage.views
+
+    assert not hasattr(homepage.views, "page")
+
+
+def test_type_list_uses_length_filter(client):
+    html = client.get("/types/").content.decode("utf-8")
+    assert "Всего типов:" in html
