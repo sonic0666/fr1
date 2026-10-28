@@ -126,3 +126,23 @@ def test_import_rolls_back_on_error(empty_db, tmp_path, monkeypatch):
     count = conn.execute("SELECT COUNT(*) FROM notification_types").fetchone()
     conn.close()
     assert count[0] == 0
+
+
+QUERIES_FILE = SCHEMA_FILE.parent / "queries.sql"
+
+
+def _read_queries():
+    text = QUERIES_FILE.read_text(encoding="utf-8")
+    parts = [part.strip() for part in text.split("-- ;;")]
+    return [part for part in parts if "SELECT" in part]
+
+
+def test_queries_file_has_at_least_ten_queries():
+    assert len(_read_queries()) >= 10
+
+
+@pytest.mark.parametrize("query", _read_queries())
+def test_each_query_in_queries_sql_runs(sample_db, query):
+    conn = get_connection()
+    conn.execute(query).fetchall()
+    conn.close()
