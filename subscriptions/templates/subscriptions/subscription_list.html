@@ -7,6 +7,19 @@
 {% block content %}
     <h1>Подписки</h1>
 
+    <p>
+        Канал:
+        <a href="{% url 'subscriptions:list' %}">все</a>
+        {% for channel in channels %}
+            |
+            {% if channel == selected_channel %}
+                <strong>{{ channel }}</strong>
+            {% else %}
+                <a href="{% url 'subscriptions:list' %}?channel={{ channel }}">{{ channel }}</a>
+            {% endif %}
+        {% endfor %}
+    </p>
+
     {% for subscription in subscriptions %}
         <article class="card subscription-card mb-3">
             <div class="card-body">
@@ -17,10 +30,10 @@
                 </h2>
 
                 <p class="card-text">
-                    Подписчик: {{ subscription.subscriber.name }}
+                    Подписчик: {{ subscription.subscriber_name }}
                 </p>
                 <p class="card-text">
-                    Тип уведомлений: {{ subscription.notification_type.name }}
+                    Тип уведомлений: {{ subscription.type_name }}
                 </p>
                 <p class="card-text">
                     Канал: {{ subscription.channel }}

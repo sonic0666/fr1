@@ -124,3 +124,98 @@ def test_page_function_is_removed():
 def test_type_list_uses_length_filter(client):
     html = client.get("/types/").content.decode("utf-8")
     assert "Всего типов:" in html
+
+
+def test_subscription_list_from_database(client, sample_db):
+    response = client.get("/subscriptions/")
+    html = response.content.decode("utf-8")
+    assert response.status_code == 200
+    assert "Иван Петров" in html
+    assert "Акции и скидки" in html
+    assert "31.12.2099" in html
+    assert html.count("subscription-card") == 4
+
+
+def test_subscription_list_filtered_by_channel(client, sample_db):
+    html = client.get("/subscriptions/?channel=push").content.decode("utf-8")
+    assert html.count("subscription-card") == 1
+    assert "Подписка №2" in html
+
+
+def test_subscription_list_ignores_unknown_channel(client, sample_db):
+    html = client.get("/subscriptions/?channel=fax").content.decode("utf-8")
+    assert html.count("subscription-card") == 4
+
+
+def test_subscription_statuses_from_database(client, sample_db):
+    assert "Активна" in client.get("/subscriptions/1/").content.decode()
+    assert "Истекла" in client.get("/subscriptions/2/").content.decode()
+    assert "Приостановлена" in client.get("/subscriptions/4/").content.decode()
+
+
+def test_sql_injection_in_channel_is_harmless(client, sample_db):
+    url = "/subscriptions/?channel=email'%20OR%20'1'='1"
+    html = client.get(url).content.decode("utf-8")
+    assert html.count("subscription-card") == 4
+
+
+def test_type_detail_counts_active_subscriptions(client, sample_db):
+    html = client.get("/types/1/").content.decode("utf-8")
+    assert "активных подписок: 2" in html
+    html = client.get("/types/2/").content.decode("utf-8")
+    assert "активных подписок нет" in html
+
+
+def test_homepage_shows_row_counts(client, sample_db):
+    html = client.get("/").content.decode("utf-8")
+    assert "типов уведомлений – 3" in html
+    assert "подписчиков – 2" in html
+    assert "подписок – 4" in html
+
+
+def test_available_types_page_without_parameters(client, sample_db):
+    response = client.get("/types/available/")
+    assert response.status_code == 200
+    assert "Иван Петров" in response.content.decode("utf-8")
+
+
+def test_available_types_excludes_subscribed(client, sample_db):
+    url = "/types/available/?subscriber=1&date=2026-10-29"
+    html = client.get(url).content.decode("utf-8")
+    assert "Новости сервиса" in html
+    assert "Системные оповещения" in html
+    assert "Акции и скидки</a>" not in html
+
+
+def test_available_types_depends_on_date(client, sample_db):
+    url = "/types/available/?subscriber=1&date=2019-01-01"
+    html = client.get(url).content.decode("utf-8")
+    assert "Новости сервиса" not in html
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "subscriber=abc&date=2026-10-29",
+        "subscriber=1&date=not-a-date",
+        "subscriber=1",
+        "subscriber=999&date=2026-10-29",
+    ],
+)
+def test_available_types_rejects_bad_input(client, sample_db, query):
+    response = client.get("/types/available/?" + query)
+    assert response.status_code == 400
+
+
+def test_statistics_page(client, sample_db):
+    response = client.get("/subscriptions/statistics/")
+    html = response.content.decode("utf-8")
+    assert response.status_code == 200
+    assert "Статистика подписок" in html
+    assert "Популярные типы" in html
+    assert "<li>Акции и скидки – 2</li>" in html
+
+
+def test_statistics_url_name():
+    assert reverse("subscriptions:statistics") == "/subscriptions/statistics/"
+    assert reverse("notification_types:available") == "/types/available/"

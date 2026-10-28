@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Доступные типы – NotifyHub
+{% endblock %}
+
+{% block content %}
+    <h1>Доступные типы уведомлений</h1>
+
+    <p>
+        Типы, на которые выбранный подписчик не имеет действующей подписки
+        на указанную дату.
+    </p>
+
+    <form method="get" class="row g-2 mb-4">
+        <div class="col-auto">
+            <select name="subscriber" class="form-select">
+                <option value="">– подписчик –</option>
+                {% for item in subscribers %}
+                    <option
+                        value="{{ item.id }}"
+                        {% if item.id|stringformat:"s" == selected_subscriber %}selected{% endif %}
+                    >{{ item.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <input
+                type="date"
+                name="date"
+                value="{{ selected_date }}"
+                class="form-control"
+            >
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Показать</button>
+        </div>
+    </form>
+
+    {% if error %}
+        <p class="text-danger">{{ error }}</p>
+    {% elif result is not None %}
+        <h2 class="h5">Доступно для {{ subscriber.name }}:</h2>
+        <ul>
+            {% for notification_type in result %}
+                <li>
+                    <a href="{% url 'notification_types:detail' notification_type.id %}">
+                        {{ notification_type.name }}
+                    </a>
+                </li>
+            {% empty %}
+                <li>Подписчик уже подписан на все типы.</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}

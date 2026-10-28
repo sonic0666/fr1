@@ -10,11 +10,19 @@
     <p class="lead">
         Сервис управления подписками на уведомления.
     </p>
+    <p>
+        В базе данных: типов уведомлений – {{ counts.notification_types }},
+        подписчиков – {{ counts.subscribers }},
+        подписок – {{ counts.subscriptions }}.
+    </p>
     <p>Основные разделы:</p>
     <a href="{% url 'notification_types:list' %}" class="btn btn-primary me-2">
         Типы уведомлений
     </a>
-    <a href="{% url 'subscriptions:list' %}" class="btn btn-secondary">
+    <a href="{% url 'subscriptions:list' %}" class="btn btn-secondary me-2">
         Подписки
+    </a>
+    <a href="{% url 'subscriptions:statistics' %}" class="btn btn-outline-primary">
+        Статистика
     </a>
 {% endblock %}

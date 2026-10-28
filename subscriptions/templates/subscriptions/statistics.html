@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Статистика – NotifyHub
+{% endblock %}
+
+{% block content %}
+    <h1>Статистика подписок</h1>
+    <p class="text-muted">Данные на {{ today|date:"d.m.Y" }}.</p>
+
+    <h2 class="h5">Подписок по типам уведомлений</h2>
+    <table class="table table-sm w-auto">
+        <thead>
+            <tr><th>Тип</th><th>Подписок</th></tr>
+        </thead>
+        <tbody>
+            {% for row in type_statistics %}
+                <tr><td>{{ row.name }}</td><td>{{ row.total }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2 class="h5">Подписок по каналам</h2>
+    <table class="table table-sm w-auto">
+        <thead>
+            <tr><th>Канал</th><th>Подписок</th></tr>
+        </thead>
+        <tbody>
+            {% for row in channel_statistics %}
+                <tr><td>{{ row.channel }}</td><td>{{ row.total }}</td></tr>
+            {% empty %}
+                <tr><td colspan="2">Подписок нет.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2 class="h5">Популярные типы (больше одной подписки)</h2>
+    <ul>
+        {% for row in popular_types %}
+            <li>{{ row.name }} – {{ row.total }}</li>
+        {% empty %}
+            <li>Таких типов нет.</li>
+        {% endfor %}
+    </ul>
+{% endblock %}

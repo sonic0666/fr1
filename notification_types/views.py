@@ -1,23 +1,24 @@
 from datetime import date
 
-from django.conf import settings
 from django.shortcuts import render
 
-from models.notification_types import find_notification_type_by_id
-from storage import (
-    load_notification_types,
-    load_subscribers,
-    load_subscriptions,
+from db.database import get_connection
+from db.queries import (
+    count_active_subscriptions,
+    get_available_types,
+    get_notification_type,
+    get_notification_types,
+    get_subscriber,
+    get_subscribers,
 )
-
-DATA_DIR = settings.BASE_DIR / "data"
-TYPES_FILE = str(DATA_DIR / "notification_types.json")
-SUBSCRIBERS_FILE = str(DATA_DIR / "subscribers.json")
-SUBSCRIPTIONS_FILE = str(DATA_DIR / "subscriptions.json")
 
 
 def notification_types(request):
-    types_list = load_notification_types(TYPES_FILE)
+    conn = get_connection()
+    try:
+        types_list = get_notification_types(conn)
+    finally:
+        conn.close()
 
     context = {
         "notification_types": types_list,
@@ -31,24 +32,18 @@ def notification_types(request):
 
 
 def notification_type_detail(request, type_id):
-    types_list = load_notification_types(TYPES_FILE)
-    notification_type = find_notification_type_by_id(types_list, type_id)
-
-    active_count = 0
-    if notification_type is not None:
-        subscribers_list = load_subscribers(SUBSCRIBERS_FILE)
-        subscriptions_list = load_subscriptions(
-            SUBSCRIPTIONS_FILE,
-            types_list,
-            subscribers_list,
-        )
-        today = date.today()
-        active_count = sum(
-            1
-            for subscription in subscriptions_list
-            if subscription.notification_type is notification_type
-            and subscription.get_status(today) == "Подписка активна"
-        )
+    conn = get_connection()
+    try:
+        notification_type = get_notification_type(conn, type_id)
+        active_count = 0
+        if notification_type is not None:
+            active_count = count_active_subscriptions(
+                conn,
+                type_id,
+                date.today(),
+            )
+    finally:
+        conn.close()
 
     context = {
         "notification_type": notification_type,
@@ -60,4 +55,47 @@ def notification_type_detail(request, type_id):
         "notification_types/type_detail.html",
         context,
         status=404 if notification_type is None else 200,
+    )
+
+
+def available_types(request):
+    """Типы, на которые подписчик ещё не подписан на выбранную дату."""
+    subscriber_value = request.GET.get("subscriber", "")
+    date_value = request.GET.get("date", "")
+    error = None
+    result = None
+    subscriber = None
+
+    conn = get_connection()
+    try:
+        subscribers_list = get_subscribers(conn)
+        if subscriber_value or date_value:
+            try:
+                subscriber_id = int(subscriber_value)
+                on_date = date.fromisoformat(date_value)
+            except ValueError:
+                error = "Выберите подписчика и укажите дату."
+            else:
+                subscriber = get_subscriber(conn, subscriber_id)
+                if subscriber is None:
+                    error = "Подписчик не найден."
+                else:
+                    result = get_available_types(conn, subscriber_id, on_date)
+    finally:
+        conn.close()
+
+    context = {
+        "subscribers": subscribers_list,
+        "selected_subscriber": subscriber_value,
+        "selected_date": date_value or date.today().isoformat(),
+        "subscriber": subscriber,
+        "result": result,
+        "error": error,
+    }
+
+    return render(
+        request,
+        "notification_types/available_types.html",
+        context,
+        status=400 if error else 200,
     )

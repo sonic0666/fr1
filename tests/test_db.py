@@ -146,3 +146,26 @@ def test_each_query_in_queries_sql_runs(sample_db, query):
     conn = get_connection()
     conn.execute(query).fetchall()
     conn.close()
+
+
+def test_query_functions(sample_db):
+    from datetime import date
+
+    from db import queries
+
+    today = date(2026, 10, 29)
+    conn = get_connection()
+    assert queries.count_rows(conn) == {
+        "notification_types": 3,
+        "subscribers": 2,
+        "subscriptions": 4,
+    }
+    assert queries.count_active_subscriptions(conn, 1, today) == 2
+    assert queries.get_notification_type(conn, 99) is None
+    assert queries.get_subscription(conn, 99, today) is None
+    expired = queries.get_subscription(conn, 2, today)
+    assert expired["is_expired"] == 1
+    assert expired["end_date"] == date(2020, 1, 1)
+    popular = queries.get_popular_types(conn)
+    assert [row["name"] for row in popular] == ["Акции и скидки"]
+    conn.close()
