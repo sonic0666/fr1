@@ -1,9 +1,17 @@
-"""Корневая маршрутизация проекта NotifyHub."""
+"""
+URL configuration for notifyhub project.
 
+The `urlpatterns` list routes URLs to views. For more information please see:
+    https://docs.djangoproject.com/en/5.2/topics/http/urls/
+"""
+from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
+    path("admin/", admin.site.urls),
     path("", include("homepage.urls")),
     path("types/", include("notification_types.urls")),
     path("subscriptions/", include("subscriptions.urls")),
 ]
+
+handler404 = "homepage.views.page_not_found"
