@@ -130,3 +130,14 @@ def cancel_subscription(
             subscription.cancel()
             return True
     return False
+
+
+def find_subscription_by_id(
+    subscriptions: list[Subscription],
+    subscription_id: int,
+) -> Optional[Subscription]:
+    """Найти подписку по идентификатору."""
+    for subscription in subscriptions:
+        if subscription.id == subscription_id:
+            return subscription
+    return None
