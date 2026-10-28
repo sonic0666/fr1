@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Подписки – NotifyHub
+{% endblock %}
+
+{% block content %}
+    <h1>Подписки</h1>
+
+    {% for subscription in subscriptions %}
+        <article class="card subscription-card mb-3">
+            <div class="card-body">
+                <h2 class="card-title h5">
+                    <a href="{% url 'subscriptions:detail' subscription.id %}">
+                        Подписка №{{ subscription.id }}
+                    </a>
+                </h2>
+
+                <p class="card-text">
+                    Подписчик: {{ subscription.subscriber.name }}
+                </p>
+                <p class="card-text">
+                    Тип уведомлений: {{ subscription.notification_type.name }}
+                </p>
+                <p class="card-text">
+                    Канал: {{ subscription.channel }}
+                </p>
+                <p class="card-text">
+                    Действует до: {{ subscription.end_date|date:"d.m.Y" }}
+                </p>
+                <p class="card-text">
+                    Статус:
+                    {% include "subscriptions/includes/subscription_status.html" %}
+                </p>
+            </div>
+        </article>
+    {% empty %}
+        <p>Подписки не найдены.</p>
+    {% endfor %}
+{% endblock %}

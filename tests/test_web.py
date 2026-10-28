@@ -1,6 +1,9 @@
 """Тесты веб-интерфейса: маршруты, коды ответов и страница 404."""
 
+from types import SimpleNamespace
+
 import pytest
+from django.template.loader import render_to_string
 from django.test import Client
 from django.test.utils import override_settings
 from django.urls import reverse
@@ -54,3 +57,36 @@ def test_homepage_uses_base_template(client):
     assert "homepage/index.html" in names
     assert "base.html" in names
     assert "includes/navigation.html" in names
+
+
+def test_type_list_uses_card_include(client):
+    response = client.get("/types/")
+    names = [template.name for template in response.templates]
+    assert "notification_types/type_list.html" in names
+    assert "notification_types/includes/type_card.html" in names
+    assert 'href="/types/1/"' in response.content.decode("utf-8")
+
+
+def test_subscription_pages_use_status_include(client):
+    for url in ("/subscriptions/", "/subscriptions/1/"):
+        response = client.get(url)
+        names = [template.name for template in response.templates]
+        assert "subscriptions/includes/subscription_status.html" in names
+
+
+@pytest.mark.parametrize(
+    "is_active, is_expired, text",
+    [
+        (True, False, "Активна"),
+        (True, True, "Истекла"),
+        (False, False, "Приостановлена"),
+        (False, True, "Приостановлена"),
+    ],
+)
+def test_subscription_status_include(is_active, is_expired, text):
+    subscription = SimpleNamespace(is_active=is_active, is_expired=is_expired)
+    html = render_to_string(
+        "subscriptions/includes/subscription_status.html",
+        {"subscription": subscription},
+    )
+    assert text in html

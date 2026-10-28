@@ -1,0 +1,13 @@
+{% if not subscription.is_active %}
+    <span class="badge bg-secondary subscription-status subscription-status-paused">
+        Приостановлена
+    </span>
+{% elif subscription.is_expired %}
+    <span class="badge bg-warning text-dark subscription-status subscription-status-expired">
+        Истекла
+    </span>
+{% else %}
+    <span class="badge bg-success subscription-status subscription-status-active">
+        Активна
+    </span>
+{% endif %}

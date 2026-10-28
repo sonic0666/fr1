@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if notification_type %}
+        {{ notification_type.name }} – NotifyHub
+    {% else %}
+        Тип уведомлений не найден – NotifyHub
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% if notification_type %}
+        <div class="card">
+            <div class="card-body">
+                <h1 class="card-title">
+                    {{ notification_type.name }}
+                </h1>
+
+                <p class="card-text">
+                    <strong>ID:</strong> {{ notification_type.id }}
+                </p>
+
+                <p class="card-text">
+                    <strong>Подписчики на сегодня:</strong>
+                    {% if active_count %}
+                        <span class="badge bg-success">
+                            активных подписок: {{ active_count }}
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary">
+                            активных подписок нет
+                        </span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    {% else %}
+        <h1 class="text-danger">
+            Тип уведомлений не найден
+        </h1>
+        <p>
+            Тип уведомлений с указанным идентификатором отсутствует.
+        </p>
+    {% endif %}
+
+    <a
+        href="{% url 'notification_types:list' %}"
+        class="btn btn-outline-secondary mt-3"
+    >
+        ← к списку типов
+    </a>
+{% endblock %}

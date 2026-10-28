@@ -40,6 +40,11 @@ class Subscription:
         """Приостановить подписку."""
         self.is_active = False
 
+    @property
+    def is_expired(self) -> bool:
+        """Истёк ли срок действия подписки на сегодняшнюю дату."""
+        return self.end_date < date.today()
+
     def days_until_renewal(self, current_date: date) -> int:
         """Функция из ПР1: количество дней до окончания подписки."""
         delta = self.end_date - current_date

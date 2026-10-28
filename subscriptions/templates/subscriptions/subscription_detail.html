@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if subscription %}
+        Подписка №{{ subscription.id }} – NotifyHub
+    {% else %}
+        Подписка не найдена – NotifyHub
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% if subscription %}
+        <div class="card">
+            <div class="card-body">
+                <h1 class="card-title">
+                    Подписка №{{ subscription.id }}
+                </h1>
+
+                <p class="card-text">
+                    <strong>Подписчик:</strong>
+                    {{ subscription.subscriber.name }}
+                    ({{ subscription.subscriber.email }})
+                </p>
+
+                <p class="card-text">
+                    <strong>Тип уведомлений:</strong>
+                    {{ subscription.notification_type.name }}
+                </p>
+
+                <p class="card-text">
+                    <strong>Канал:</strong>
+                    {{ subscription.channel }}
+                </p>
+
+                <p class="card-text">
+                    <strong>Действует до:</strong>
+                    {{ subscription.end_date|date:"d.m.Y" }}
+                </p>
+
+                <p class="card-text">
+                    <strong>Статус:</strong>
+                    {% include "subscriptions/includes/subscription_status.html" %}
+                </p>
+            </div>
+        </div>
+    {% else %}
+        <h1 class="text-danger">
+            Подписка не найдена
+        </h1>
+        <p>
+            Подписка с указанным идентификатором отсутствует.
+        </p>
+    {% endif %}
+
+    <a
+        href="{% url 'subscriptions:list' %}"
+        class="btn btn-outline-secondary mt-3"
+    >
+        ← к списку подписок
+    </a>
+{% endblock %}

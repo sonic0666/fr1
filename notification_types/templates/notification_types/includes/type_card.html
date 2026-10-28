@@ -1,0 +1,18 @@
+<article class="card type-card mb-3">
+    <div class="card-body">
+        <h2 class="card-title h5">
+            {{ notification_type.name }}
+        </h2>
+
+        <p class="card-text">
+            ID: {{ notification_type.id }}
+        </p>
+
+        <a
+            href="{% url 'notification_types:detail' notification_type.id %}"
+            class="btn btn-primary"
+        >
+            Подробнее
+        </a>
+    </div>
+</article>

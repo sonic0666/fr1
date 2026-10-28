@@ -1,6 +1,6 @@
 """Тесты класса Subscription и функций работы с коллекцией подписок."""
 
-from datetime import date
+from datetime import date, timedelta
 
 from models import NotificationType, Subscriber
 from models.subscriptions import (
@@ -132,3 +132,18 @@ def test_cancel_subscription_by_id():
     )
     assert cancel_subscription(subscriptions, subscription.id)
     assert subscription.get_status(TODAY) == "Подписка приостановлена"
+
+
+def test_subscription_is_expired_property():
+    subscriber = _make_subscriber()
+    notification_type = _make_type()
+    today = date.today()
+    past = create_subscription(
+        [], subscriber, notification_type, "email",
+        today - timedelta(days=1), TODAY,
+    )
+    last_day = create_subscription(
+        [], subscriber, notification_type, "email", today, TODAY,
+    )
+    assert past.is_expired
+    assert not last_day.is_expired
